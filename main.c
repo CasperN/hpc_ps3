@@ -88,86 +88,75 @@ void static_(Params *p){
     MPI_File_write_at_all(f, low * sizeof(MPI_INT), res, high - low, MPI_INT,
         MPI_STATUSES_IGNORE);
 
-        // MPI_File_write_at_all(f, msg[0] * sizeof(int), res, MPI_INT,
-        //     msg[1] - msg[0], MPI_STATUSES_IGNORE);
-
     MPI_File_close(&f);
     free(res);
 }
 
 // ----------------------------- Dynamic mode ----------------------------------
 
+void next_chunk(int *index, int *range, int chunk_size, int maximum){
+    int ix = *index;
+    range[0] = ix;
+    ix += chunk_size;
+    ix = ix > maximum ? maximum : ix;
+    range[1] = ix;
+    *index = ix;
+}
+
 void boss(Params *p){
-    int msg[2], loc, len;
+    int range[2], index, maximum;
     MPI_Request *requests;
     MPI_Status status;
     MPI_File f;
-    // Boss will open file but do nothing because all process must open
+    // Boss will open file but do nothing with it (MPI_File_open is blocking)
     MPI_File_open(MPI_COMM_WORLD, p->filename,
         MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &f);
 
     requests = malloc(sizeof(MPI_Request) * p->n_ranks);
-
-    loc = 0;
-    len = p->width * p->width;
-
+    maximum = p->width * p->width;
+    index = 0;
+    // Initialize workers' tasks
     for(int i=1; i < p->n_ranks; i++){
-        msg[0] = loc;
-        loc += p->chunk_size;
-        loc = loc > len ? len : loc;
-        msg[1] = loc;
-        MPI_Isend(msg, 2, MPI_INT, i, 0, MPI_COMM_WORLD, requests + i);
+        next_chunk(&index, range, p->chunk_size, maximum);
+        MPI_Isend(range, 2, MPI_INT, i, 0, MPI_COMM_WORLD, requests + i);
     }
-
-    while (loc < len) {
-        // Workers send a signal they're done. Reply with more work
-        MPI_Recv(msg, 2, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD,
-            &status);
-
-        msg[0] = loc;
-        loc += p->chunk_size;
-        loc = loc > len ? len : loc;
-        msg[1] = loc;
-        MPI_Send(msg, 2, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
+    // Feed workers more tasks when they're done
+    while (index < maximum) {
+        MPI_Recv(range, 2, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+        next_chunk(&index, range, p->chunk_size, maximum);
+        MPI_Send(range, 2, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
     }
-
-    // Send everyone out of range workload to signal quiting
+    // Out of range workload to signals quiting
     for(int i=1; i < p->n_ranks; i++){
-        msg[0] = len;
-        msg[1] = len;
-        MPI_Isend(msg, 2, MPI_INT, i, 0, MPI_COMM_WORLD, requests + i);
+        range[0] = range[1] = maximum;
+        MPI_Isend(range, 2, MPI_INT, i, 0, MPI_COMM_WORLD, requests + i);
     }
-    //  Make sure they're all sent
     MPI_Waitall(p->n_ranks - 1, requests + 1, MPI_STATUSES_IGNORE);
     free(requests);
     MPI_File_close(&f);
 }
 
 void worker(Params *p){
-    int msg[2], *res;
+    int range[2], *res;
     MPI_File f;
     MPI_File_open(MPI_COMM_WORLD, p->filename,
         MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &f);
 
     while(1){
-        MPI_Recv(msg, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-        // printf("Worker %d recv work[%d,%d)\n", p->rank, msg[0], msg[1]);
+        MPI_Recv(range, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
 
-
-        if (msg[0] == p->width * p->width){
+        if (range[0] == p->width * p->width){
             MPI_File_close(&f);
             return; // No more work to do
         }
 
-        res = work_range(p, msg[0], msg[1]);
+        res = work_range(p, range[0], range[1]);
 
-        MPI_File_write_at(f, msg[0] * sizeof(int), res, msg[1] - msg[0],
+        MPI_File_write_at(f, range[0] * sizeof(int), res, range[1] - range[0],
             MPI_INT, MPI_STATUSES_IGNORE);
 
         free(res);
-        // Ask for more work
-        // printf("Worker %d Asking for more work\n", p->rank);
-        MPI_Send(msg, 2, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(range, 2, MPI_INT, 0, 0, MPI_COMM_WORLD);
     }
 }
 
