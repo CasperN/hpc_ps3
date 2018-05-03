@@ -4,8 +4,8 @@
 #SBATCH --output=scaling1.out
 #SBATCH --error=scaling1.err
 #SBATCH --nodes=1
-#SBATCH --ntasks per node=16
-#SBATCH --cpus per task=1
+#SBATCH --ntasks-per-node=16
+#SBATCH --cpus-per-task=1
 #SBATCH --exclusive
 
 width=12000

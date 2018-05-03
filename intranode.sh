@@ -4,8 +4,8 @@
 #SBATCH --output=intranode.out
 #SBATCH --error=intranode.err
 #SBATCH --nodes=1
-#SBATCH --ntasks per node=2
-#SBATCH --cpus per task=1
+#SBATCH --ntasks-per-node=2
+#SBATCH --cpus-per-task=1
 #SBATCH --exclusive
 
 module load mvapich2
