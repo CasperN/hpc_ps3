@@ -1,22 +1,23 @@
 CC = mpicc -fopenmp -std=c99 -cc=/opt/local/bin/gcc-mp-7 -O3
-Cr = -0.7
-Ci = 0.26
+Cr = -.7
+Ci = .26
 width = 5000
 ranks = 5
 mpi_modes = dynamic static
 
 info :
-	@ echo parameters:
-	@ echo
+	@ echo Parameters:
 	@ head -n 7 makefile
-	@ echo to run network_test locally "'make network_test'"
-	@ echo to check versions are consistent "'make test'"
-
-
+	@ echo Make commands:
+	@ echo "'make network_test'\t" to run network_test locally
+	@ echo "'make test'\t\t" to check versions are consistent
+	@ echo "'make all'\t\t"  to compile binaries
 
 clean :
 	rm *.o
 	rm out/*
+
+all : julia.o network_test.o
 
 # Tests
 
