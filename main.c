@@ -168,7 +168,7 @@ int main(int argc, char const *argv[]) {
     double start;
 
     if (argc != 6 && argc != 5){
-        printf("Usage: ./julia.o width Cx Cy MPI_Mode filename\n\n");
+        printf("Usage: ./julia.o width Cx Cy MPI_Mode filename \n\n");
         exit(0);
     }
     p.width = atoi(argv[1]);
