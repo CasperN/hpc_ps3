@@ -1,15 +1,18 @@
 CC = mpicc -fopenmp -std=c99 -cc=/opt/local/bin/gcc-mp-7 -O3
-
 Cr = -0.7
 Ci = 0.26
-
 width = 5000
 ranks = 5
-
 mpi_modes = dynamic static
 
 info :
-	@ echo "TODO info"
+	@ echo parameters:
+	@ echo
+	@ head -n 7 makefile
+	@ echo to run network_test locally "'make network_test'"
+	@ echo to check versions are consistent "'make test'"
+
+
 
 clean :
 	rm *.o

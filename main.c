@@ -167,8 +167,8 @@ int main(int argc, char const *argv[]) {
     Params p;
     double start;
 
-    if (argc != 6 && argc != 5){
-        printf("Usage: ./julia.o width Cx Cy MPI_Mode filename \n\n");
+    if (argc != 6 && argc != 7){
+        printf("Usage: ./julia.o width Cx Cy MPI_Mode filename [chunk]\n\n");
         exit(0);
     }
     p.width = atoi(argv[1]);
@@ -186,7 +186,8 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
 
-    if(argc == 6) p.filename = argv[5];
+    p.filename = argv[5];
+    p.chunk_size = argc == 7 ? atoi(argv[6]) : CHUNK_SIZE
 
     assert(p.width > 0);
 
@@ -225,6 +226,7 @@ int main(int argc, char const *argv[]) {
 
     if(p.rank == 0)
         printf("Runtime: %lf seconds\n", omp_get_wtime() - start);
+    fflush(stdout);
 
     return 0;
 }
